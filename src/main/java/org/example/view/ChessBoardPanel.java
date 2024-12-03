@@ -1,14 +1,13 @@
 package org.example.view;
 
-
 import org.example.helper.LoadImageHelper;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.List;
 
 public class ChessBoardPanel extends JPanel {
 
@@ -17,6 +16,7 @@ public class ChessBoardPanel extends JPanel {
 
     private int selectedRow = -1;
     private int selectedCol = -1;
+    private List<String> possibleMoves;
 
     public ChessBoardPanel() {
         initializeBoard();
@@ -76,6 +76,12 @@ public class ChessBoardPanel extends JPanel {
         selectedRow = y / squareSize;
         selectedCol = x / squareSize;
 
+        possibleMoves = new LinkedList<>();
+        possibleMoves.add("a1a2");
+        possibleMoves.add("a1a3");
+        possibleMoves.add("d5d3");
+        possibleMoves.add("d5d7");
+
         repaint();
     }
 
@@ -88,11 +94,16 @@ public class ChessBoardPanel extends JPanel {
 
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
-                if ((row + col) % 2 == 0) {
+                if (isUsersTurn() && row == selectedRow && col == selectedCol) {
+                    g.setColor(Color.MAGENTA);
+                } else if (isUsersTurn() && isPositionLegalMove(row, col)) {
+                    g.setColor(Color.GREEN);
+                } else if ((row + col) % 2 == 0) {
                     g.setColor(Color.WHITE);
                 } else {
                     g.setColor(new Color(120, 120, 120));
                 }
+
                 g.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
 
                 String piece = board[row][col];
@@ -104,6 +115,32 @@ public class ChessBoardPanel extends JPanel {
                 }
             }
         }
+    }
+
+    private Boolean isUsersTurn() {
+        return true;
+    }
+
+    private Boolean isPositionLegalMove(int matrixRow, int matrixCol) {
+        if (this.possibleMoves == null)
+            return false;
+
+        return this.possibleMoves.stream().anyMatch((m) -> {
+            char columnChar = m.charAt(2);
+            char rowChar = m.charAt(3);
+
+            int chessRow = 8 - (rowChar - '0');
+            int chessCol = columnChar - 'a';
+
+            return chessRow == matrixRow && chessCol == matrixCol;
+        });
+    }
+
+    private String convertToChessPosition(int matrixRow, int matrixCol) {
+        char columnChar = (char) ('a' + matrixCol);
+        int chessRow = 8 - matrixRow;
+
+        return "" + columnChar + chessRow;
     }
 
     @Override

@@ -10,7 +10,6 @@ public class LoadImageHelper {
         URL ImageURL = LoadImageHelper.class.getResource(path);
 
         if(ImageURL == null) {
-            System.err.println("File " + path + " not found");
             return null;
         }
 
