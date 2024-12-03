@@ -3,6 +3,7 @@ package org.example.engine;
 import lombok.Getter;
 import org.example.helper.PythonCommandExecutor;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,12 +16,13 @@ public class Engine {
         table = tables;
     }
 
-    public void myMove(String move,String table)
+    public void myMove(String move)
     {
         String state = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");print(b.outcome());");
         if(state.equals("None"))
         {
             if(this.generateMoves().contains(move)) table = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");b.push_san(\\\"\\\""+move+"\\\"\\\");print(b.fen())");
+            //String BotMove = Minmax(tabla);
             //this.botMove();
         }
         else handleEnd(state);
@@ -33,12 +35,21 @@ public class Engine {
         for(int i=0;i<=potezi.length-1;i++) potezi[i]= potezi[i].strip().substring(1, 5);
         return Arrays.stream(potezi).toList();
     }
-    public void botMove(String move,String table){
+    public List<String> generateMoves(String string)
+    {
+        List<String> novi = new ArrayList<>();
+        List<String> potezi = generateMoves();
+        for(String potez : potezi )
+        {
+            if(potez.substring(0,2).equals(string)) novi.add(potez);
+        }
+        return novi;
+    }
+    public void botMove(String move){
         String state = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");print(b.outcome());");
         if(state.equals("None"))
         {
             if(this.generateMoves().contains(move)) table = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");b.push_san(\\\"\\\""+move+"\\\"\\\");print(b.fen())");
-            //this.myMove();
         }
         else handleEnd(state);
     }
