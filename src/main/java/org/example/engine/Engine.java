@@ -1,35 +1,41 @@
 package org.example.engine;
 
 import lombok.Getter;
-import org.example.helper.PythonCommandExecutor;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.example.helper.PythonMultiLineExecutor;
+
+
 @Getter
 public class Engine {
     public String table;
-    public PythonCommandExecutor executor;
+    public PythonMultiLineExecutor executor;
     public Engine(String tables){
-        executor = new PythonCommandExecutor();
         table = tables;
+        executor = new PythonMultiLineExecutor();
+        //Context python = GraalPyResources.createContext();
+        //python.eval("python","termcolor");
     }
 
     public void myMove(String move)
     {
-        String state = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");print(b.outcome());");
+        String state = executor.execute("\\\"import chess;b=chess.Board('"+table+"');print(b.outcome());\\\"");
         if(state.equals("None"))
         {
-            if(this.generateMoves().contains(move)) table = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");b.push_san(\\\"\\\""+move+"\\\"\\\");print(b.fen())");
+
+            if(this.generateMoves().contains(move)) table = executor.execute("\\\"import chess;b=chess.Board('"+table+"');b.push_san('"+move+"');print(b.fen())\\\"");
             //String BotMove = Minmax(tabla);
-            //this.botMove();
+            this.botMove(null);
         }
         else handleEnd(state);
     }
     public List<String> generateMoves()
     {
-        String line = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");print(list(map(lambda x: x.uci(), b.generate_legal_moves())))");
+        String line = executor.execute("\\\"import chess;b=chess.Board('"+table+"');print(list(map(lambda x: x.uci(), b.generate_legal_moves())))\\\"");
         line = line.substring(1,line.length()-1);
         String[] potezi = line.split(",");
         for(int i=0;i<=potezi.length-1;i++) potezi[i]= potezi[i].strip().substring(1, 5);
@@ -46,10 +52,12 @@ public class Engine {
         return novi;
     }
     public void botMove(String move){
-        String state = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");print(b.outcome());");
+        String state = executor.execute("\\\"import chess;b=chess.Board('"+table+"');print(b.outcome());\\\"");
         if(state.equals("None"))
         {
-            if(this.generateMoves().contains(move)) table = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");b.push_san(\\\"\\\""+move+"\\\"\\\");print(b.fen())");
+            move = executor.execute("\\\"import chess;import chess.polyglot;board = chess.Board('"+table+"');`nwith chess.polyglot.open_reader('C:/Users/Administrator/Desktop/Human.bin') as reader:`n`tprint(reader.choice(board))\\\"");
+            String[] potez = move.split("'");
+            if(this.generateMoves().contains(potez[1])) table = executor.execute("\\\"import chess;b=chess.Board('"+table+"');b.push_san('"+potez[1]+"');print(b.fen())\\\"");
         }
         else handleEnd(state);
     }
