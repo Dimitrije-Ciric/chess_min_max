@@ -60,8 +60,8 @@ public class Engine {
         if(state.equals("None"))
         {
             String playBookPath = this.getClass().getResource("/Human.bin").getPath().substring(1);
-            System.out.println(playBookPath);
-            move = executor.execute("\\\"import chess;import chess.polyglot;board = chess.Board('"+table+"');`nwith chess.polyglot.open_reader('" + playBookPath + "') as reader:`n`tprint(reader.choice(board))\\\"");
+            move = executor.execute("\\\"import chess;import chess.polyglot;board = chess.Board('"+table+"');`ntry:`n`twith chess.polyglot.open_reader('" + playBookPath + "') as reader:`n`t`tprint(reader.choice(board))`nexcept IndexError as e:`n`tprint('over')\\\"");
+            System.out.println(move);
             String[] potez = move.split("'");
             if(this.generateMoves().contains(potez[1])) table = executor.execute("\\\"import chess;b=chess.Board('"+table+"');b.push_san('"+potez[1]+"');print(b.fen())\\\"");
         }
