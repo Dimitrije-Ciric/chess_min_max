@@ -16,11 +16,19 @@ public class Engine {
         table = tables;
     }
 
+    public Engine() {
+        executor = new PythonCommandExecutor();
+        table = "8/P7/8/8/8/8/8/7k w - - 0 1";
+//        table = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    }
+
     public void myMove(String move)
     {
         String state = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");print(b.outcome());");
         if(state.equals("None"))
         {
+            System.out.println(this.generateMoves());
+            System.out.println(move);
             if(this.generateMoves().contains(move)) table = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");b.push_san(\\\"\\\""+move+"\\\"\\\");print(b.fen())");
             //String BotMove = Minmax(tabla);
             //this.botMove();
@@ -32,7 +40,7 @@ public class Engine {
         String line = executor.execute("import chess;b=chess.Board(\\\"\\\""+table+"\\\"\\\");print(list(map(lambda x: x.uci(), b.generate_legal_moves())))");
         line = line.substring(1,line.length()-1);
         String[] potezi = line.split(",");
-        for(int i=0;i<=potezi.length-1;i++) potezi[i]= potezi[i].strip().substring(1, 5);
+        for(int i=0;i<=potezi.length-1;i++) potezi[i]= potezi[i].strip().replaceAll("'", "");
         return Arrays.stream(potezi).toList();
     }
     public List<String> generateMoves(String string)

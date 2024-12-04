@@ -1,9 +1,12 @@
 package org.example.view;
 
+import org.example.engine.Engine;
 import org.example.helper.LoadImageHelper;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.*;
@@ -11,8 +14,30 @@ import java.util.List;
 
 public class ChessBoardPanel extends JPanel {
 
+    private Engine engine = new Engine();
+
+    private String userPlayer = new Random().nextBoolean() ? "w" : "b";
+
     private final Map<String, Image> pieceImages = new HashMap<>();
-    private final String[][] board = new String[8][8];
+
+    private static final Map<Character, String> pieceMap = new HashMap<>();
+
+    static {
+        pieceMap.put('p', "pawn_black");
+        pieceMap.put('P', "pawn_white");
+        pieceMap.put('r', "rook_black");
+        pieceMap.put('R', "rook_white");
+        pieceMap.put('n', "knight_black");
+        pieceMap.put('N', "knight_white");
+        pieceMap.put('b', "bishop_black");
+        pieceMap.put('B', "bishop_white");
+        pieceMap.put('q', "queen_black");
+        pieceMap.put('Q', "queen_white");
+        pieceMap.put('k', "king_black");
+        pieceMap.put('K', "king_white");
+    }
+
+    private String[][] board = new String[8][8];
 
     private int selectedRow = -1;
     private int selectedCol = -1;
@@ -31,7 +56,6 @@ public class ChessBoardPanel extends JPanel {
     }
 
     private void loadPieceImages() {
-        System.out.println(LoadImageHelper.load("/chess_icons/wp.png"));
         pieceImages.put("pawn_white", LoadImageHelper.load("/chess_icons/wp.png"));
         pieceImages.put("pawn_black", LoadImageHelper.load("/chess_icons/bp.png"));
         pieceImages.put("rook_white", LoadImageHelper.load("/chess_icons/wr.png"));
@@ -47,23 +71,7 @@ public class ChessBoardPanel extends JPanel {
     }
 
     private void initializeBoard() {
-        board[0][0] = board[0][7] = "rook_black";
-        board[0][1] = board[0][6] = "knight_black";
-        board[0][2] = board[0][5] = "bishop_black";
-        board[0][3] = "queen_black";
-        board[0][4] = "king_black";
-        for (int i = 0; i < 8; i++) {
-            board[1][i] = "pawn_black";
-        }
-
-        board[7][0] = board[7][7] = "rook_white";
-        board[7][1] = board[7][6] = "knight_white";
-        board[7][2] = board[7][5] = "bishop_white";
-        board[7][3] = "queen_white";
-        board[7][4] = "king_white";
-        for (int i = 0; i < 8; i++) {
-            board[6][i] = "pawn_white";
-        }
+        this.board = convertFENToMatrix(this.engine.getTable(), userPlayer);
     }
 
     private void handleMouseClick(MouseEvent e) {
@@ -76,11 +84,20 @@ public class ChessBoardPanel extends JPanel {
         selectedRow = y / squareSize;
         selectedCol = x / squareSize;
 
-        possibleMoves = new LinkedList<>();
-        possibleMoves.add("a1a2");
-        possibleMoves.add("a1a3");
-        possibleMoves.add("d5d3");
-        possibleMoves.add("d5d7");
+        if (possibleMoves != null && isPositionLegalMove(selectedRow, selectedCol)) {
+            String move = this.possibleMoves.stream().filter((m) -> {
+                return m.substring(2, 4).equals(convertToChessPosition(selectedRow, selectedCol));
+            }).findFirst().get();
+
+            if (move.length() == 5)
+                showPromotionPopup(move.substring(0, 4));
+            else {
+                this.engine.myMove(move);
+                this.possibleMoves = null;
+            }
+        } else {
+            possibleMoves = this.engine.generateMoves(convertToChessPosition(selectedRow, selectedCol));
+        }
 
         repaint();
     }
@@ -88,6 +105,8 @@ public class ChessBoardPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+
+        initializeBoard();
 
         int size = Math.min(getWidth(), getHeight());
         int squareSize = size / 8;
@@ -97,7 +116,11 @@ public class ChessBoardPanel extends JPanel {
                 if (isUsersTurn() && row == selectedRow && col == selectedCol) {
                     g.setColor(Color.MAGENTA);
                 } else if (isUsersTurn() && isPositionLegalMove(row, col)) {
-                    g.setColor(Color.GREEN);
+                    if ((row + col) % 2 == 0) {
+                        g.setColor(new Color(160, 255, 160));
+                    } else {
+                        g.setColor(new Color(50, 255, 50));
+                    }
                 } else if ((row + col) % 2 == 0) {
                     g.setColor(Color.WHITE);
                 } else {
@@ -126,21 +149,108 @@ public class ChessBoardPanel extends JPanel {
             return false;
 
         return this.possibleMoves.stream().anyMatch((m) -> {
-            char columnChar = m.charAt(2);
-            char rowChar = m.charAt(3);
-
-            int chessRow = 8 - (rowChar - '0');
-            int chessCol = columnChar - 'a';
-
-            return chessRow == matrixRow && chessCol == matrixCol;
+            return isMatrixPositionMatchingChess(matrixRow, matrixCol, m.substring(2, 4), userPlayer);
         });
     }
 
-    private String convertToChessPosition(int matrixRow, int matrixCol) {
+    public static boolean isMatrixPositionMatchingChess(int matrixRow, int matrixCol, String chessPosition, String userPlayer) {
+        char columnChar = chessPosition.charAt(0);
+        char rowChar = chessPosition.charAt(1);
+
+        int chessRow = 8 - (rowChar - '0');
+        int chessCol = columnChar - 'a';
+
+        if ("b".equals(userPlayer)) {
+            chessRow = 7 - chessRow;
+            chessCol = 7 - chessCol;
+        }
+
+        return chessRow == matrixRow && chessCol == matrixCol;
+    }
+
+    public String convertToChessPosition(int matrixRow, int matrixCol) {
+        if ("b".equals(userPlayer)) {
+            matrixRow = 7 - matrixRow;
+            matrixCol = 7 - matrixCol;
+        }
+
         char columnChar = (char) ('a' + matrixCol);
         int chessRow = 8 - matrixRow;
 
         return "" + columnChar + chessRow;
+    }
+
+    public String[][] convertFENToMatrix(String fen, String userPlayer) {
+        String[] rows = fen.split(" ")[0].split("/");
+
+        String[][] board = new String[8][8];
+
+        for (int i = 0; i < 8; i++) {
+            String row = rows[i];
+            int col = 0;
+
+            for (char ch : row.toCharArray()) {
+                if (Character.isDigit(ch)) {
+                    int emptySquares = ch - '0';
+                    for (int j = 0; j < emptySquares; j++) {
+                        board[i][col++] = "empty";
+                    }
+                } else {
+                    board[i][col++] = pieceMap.get(ch);
+                }
+            }
+        }
+
+        if ("b".equals(userPlayer)) {
+            board = flipBoard(board);
+        }
+
+        return board;
+    }
+
+    private String[][] flipBoard(String[][] board) {
+        String[][] flippedBoard = new String[8][8];
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                flippedBoard[7 - i][7 - j] = board[i][j];
+            }
+        }
+        return flippedBoard;
+    }
+
+    public String showPromotionPopup(String move) {
+        // Create a dialog to hold the popup
+        JDialog dialog = new JDialog((Frame) null, "Pawn Promotion", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setSize(300, 150);
+        dialog.setLayout(new FlowLayout());
+
+        JLabel label = new JLabel("Choose a piece for promotion:");
+        dialog.add(label);
+
+        String[] promotionOptions = {"Queen", "Rook", "Bishop", "Knight"};
+        String[] pieceCodes = {"q", "r", "b", "n"};
+        final String[] selectedPiece = {null};
+
+        for (int i = 0; i < promotionOptions.length; i++) {
+            String piece = pieceCodes[i];
+            JButton button = new JButton(promotionOptions[i]);
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    engine.myMove(move + piece);
+                    repaint();
+
+                    dialog.dispose();
+                }
+            });
+            dialog.add(button);
+        }
+
+        dialog.setLocationRelativeTo(null);
+        dialog.setVisible(true);
+
+        return selectedPiece[0];
     }
 
     @Override
