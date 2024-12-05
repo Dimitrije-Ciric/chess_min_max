@@ -3,48 +3,51 @@ package org.example.engine;
 import lombok.Getter;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import org.example.helper.PythonMultiLineExecutor;
+import lombok.SneakyThrows;
+import retrofit2.Retrofit;
+import retrofit2.converter.jackson.JacksonConverterFactory;
 
 
 @Getter
 public class Engine {
     public String table;
-    public PythonMultiLineExecutor executor;
-    public Engine(String tables){
-        table = tables;
-        executor = new PythonMultiLineExecutor();
-        //Context python = GraalPyResources.createContext();
-        //python.eval("python","termcolor");
+
+    private final Retrofit retrofit = new Retrofit.Builder()
+            .baseUrl("http://127.0.0.1:5000")
+            .addConverterFactory(JacksonConverterFactory.create())
+            .build();
+
+    private final ChessAPI chessAPI = retrofit.create(ChessAPI.class);
+
+    public Engine(String table){
+        table = table;
     }
 
     public Engine() {
         table = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        executor = new PythonMultiLineExecutor();
     }
 
+    @SneakyThrows
     public void myMove(String move)
     {
-        String state = executor.execute("\\\"import chess;b=chess.Board('"+table+"');print(b.outcome());\\\"");
-        if(state.equals("None"))
-        {
+        String state = chessAPI.getOutcome(new FENRequest(this.table)).execute().body().getOutcome();
 
-            if(this.generateMoves().contains(move)) table = executor.execute("\\\"import chess;b=chess.Board('"+table+"');b.push_san('"+move+"');print(b.fen())\\\"");
+        if(state == null || state.equals("None")) {
+            if(this.generateMoves().contains(move)) table = chessAPI.doMove(new MoveRequest(this.table, move)).execute().body().getNew_table();
             //String BotMove = Minmax(tabla);
             this.botMove(null);
         }
         else handleEnd(state);
     }
+
+    @SneakyThrows
     public List<String> generateMoves()
     {
-        String line = executor.execute("\\\"import chess;b=chess.Board('"+table+"');print(list(map(lambda x: x.uci(), b.generate_legal_moves())))\\\"");
-        line = line.substring(1,line.length()-1);
-        String[] potezi = line.split(",");
-        for(int i=0;i<=potezi.length-1;i++) potezi[i]= potezi[i].strip().replaceAll("'", "");
-        return Arrays.stream(potezi).toList();
+        return chessAPI.getPossibleMoves(new FENRequest(this.table)).execute().body().getMoves();
     }
+
     public List<String> generateMoves(String string)
     {
         List<String> novi = new ArrayList<>();
@@ -55,18 +58,17 @@ public class Engine {
         }
         return novi;
     }
+
+    @SneakyThrows
     public void botMove(String move){
-        String state = executor.execute("\\\"import chess;b=chess.Board('"+table+"');print(b.outcome());\\\"");
-        if(state.equals("None"))
+        String state = chessAPI.getOutcome(new FENRequest(this.table)).execute().body().getOutcome();
+        if(state == null || state.equals("None"))
         {
-            String playBookPath = this.getClass().getResource("/Human.bin").getPath().substring(1);
-            System.out.println(playBookPath);
-            move = executor.execute("\\\"import chess;import chess.polyglot;board = chess.Board('"+table+"');`nwith chess.polyglot.open_reader('" + playBookPath + "') as reader:`n`tprint(reader.choice(board))\\\"");
-            String[] potez = move.split("'");
-            if(this.generateMoves().contains(potez[1])) table = executor.execute("\\\"import chess;b=chess.Board('"+table+"');b.push_san('"+potez[1]+"');print(b.fen())\\\"");
+            table = chessAPI.doBotMove(new FENRequest(this.table)).execute().body().getNew_table();
         }
         else handleEnd(state);
     }
+
     public void handleEnd(String state)
     {
         String[] string = state.split(">");
