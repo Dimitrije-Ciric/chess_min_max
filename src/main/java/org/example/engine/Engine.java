@@ -22,7 +22,7 @@ public class Engine {
     private final ChessAPI chessAPI = retrofit.create(ChessAPI.class);
 
     public Engine(String table){
-        table = table;
+        this.table = table;
     }
 
     public Engine() {
@@ -67,6 +67,26 @@ public class Engine {
             table = chessAPI.doBotMove(new FENRequest(this.table)).execute().body().getNew_table();
         }
         else handleEnd(state);
+    }
+
+    @SneakyThrows
+    public boolean isStalemate() {
+        return chessAPI.getStatus(new FENRequest(this.table)).execute().body().getIs_stalemate();
+    }
+
+    @SneakyThrows
+    public boolean isCheck() {
+        return chessAPI.getStatus(new FENRequest(this.table)).execute().body().getIs_check();
+    }
+
+    @SneakyThrows
+    public boolean isCheckmate() {
+        return chessAPI.getStatus(new FENRequest(this.table)).execute().body().getIs_checkmate();
+    }
+
+    @SneakyThrows
+    public String getWinner() {
+        return chessAPI.getStatus(new FENRequest(this.table)).execute().body().getWinner();
     }
 
     public void handleEnd(String state)

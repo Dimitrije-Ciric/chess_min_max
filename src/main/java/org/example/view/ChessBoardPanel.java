@@ -44,6 +44,9 @@ public class ChessBoardPanel extends JPanel {
     private List<String> possibleMoves;
 
     public ChessBoardPanel() {
+        if (userPlayer.equals("b"))
+            this.engine.botMove(null);
+
         initializeBoard();
         loadPieceImages();
 
@@ -93,6 +96,7 @@ public class ChessBoardPanel extends JPanel {
                 showPromotionPopup(move.substring(0, 4));
             else {
                 this.engine.myMove(move);
+                showGameEndPopup();
                 this.possibleMoves = null;
             }
         } else {
@@ -239,7 +243,9 @@ public class ChessBoardPanel extends JPanel {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     engine.myMove(move + piece);
+                    showGameEndPopup();
                     repaint();
+
 
                     dialog.dispose();
                 }
@@ -251,6 +257,32 @@ public class ChessBoardPanel extends JPanel {
         dialog.setVisible(true);
 
         return selectedPiece[0];
+    }
+
+    private void showGameEndPopup() {
+        if (!this.engine.isCheckmate() && !this.engine.isStalemate()) {
+            return;
+        }
+
+        JDialog dialog = new JDialog((Frame) null, "Game finished", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setSize(300, 150);
+        dialog.setLayout(new FlowLayout());
+
+
+        JLabel label;
+
+        if (this.engine.isStalemate())
+            label = new JLabel("Pat!");
+        else if (this.engine.getWinner().equals(userPlayer))
+            label = new JLabel("Cestitamo, pobedio si!");
+        else
+            label = new JLabel("Izgubio si!");
+
+        dialog.add(label);
+
+        dialog.setLocationRelativeTo(null);
+        dialog.setVisible(true);
     }
 
     @Override

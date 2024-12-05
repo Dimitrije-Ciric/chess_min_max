@@ -56,5 +56,20 @@ def do_bot_move():
     return jsonify({'new_table': board.fen()})
 
 
+@app.route('/get_status', methods=['POST'])
+def get_board_status():
+    data = request.get_json()
+    fen = data.get('fen')
+
+    board = chess.Board(fen)
+
+    return jsonify({
+        'is_stalemate': board.is_stalemate(),
+        'is_check': board.is_check(),
+        'is_checkmate': board.is_checkmate(),
+        'winner': ("w" if board.outcome().winner == True else "b") if board.is_checkmate() else None
+    })
+
+
 if __name__ == '__main__':
     app.run(debug=True)

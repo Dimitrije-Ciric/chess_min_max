@@ -1,5 +1,7 @@
 package org.example.engine;
 
+import lombok.Getter;
+import lombok.Setter;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.POST;
@@ -89,6 +91,18 @@ class OutcomeResponse {
     }
 }
 
+@Getter
+@Setter
+class BoardStatus {
+    private Boolean is_stalemate;
+
+    private Boolean is_check;
+
+    private Boolean is_checkmate;
+
+    private String winner;
+}
+
 interface ChessAPI {
     @POST("/possible_moves")
     Call<PossibleMovesResponse> getPossibleMoves(@Body FENRequest request);
@@ -101,4 +115,7 @@ interface ChessAPI {
 
     @POST("/bot_move")
     Call<BoardResponse> doBotMove(@Body FENRequest request);
+
+    @POST("/get_status")
+    Call<BoardStatus> getStatus(@Body FENRequest request);
 }
