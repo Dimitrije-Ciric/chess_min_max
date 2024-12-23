@@ -4,8 +4,10 @@ import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import lombok.SneakyThrows;
+import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 
@@ -17,6 +19,12 @@ public class Engine {
     private final Retrofit retrofit = new Retrofit.Builder()
             .baseUrl("http://127.0.0.1:5000")
             .addConverterFactory(JacksonConverterFactory.create())
+            .client(
+                    new OkHttpClient.Builder()
+                            .callTimeout(2, TimeUnit.MINUTES)
+                            .readTimeout(2, TimeUnit.MINUTES)
+                            .build()
+            )
             .build();
 
     private final ChessAPI chessAPI = retrofit.create(ChessAPI.class);
