@@ -55,11 +55,10 @@ def do_bot_move():
         try:
             board.push_san(reader.choice(board).move.uci())
         except IndexError:
-            #print("123")
-            _, potez = min_max(board,float('-inf'),float('inf'),0,igrac, {})
+            # print("123")
+            _, potez = min_max(board, float('-inf'), float('inf'), 0, igrac, {})
             print(potez)
             board.push(potez)
-
 
     return jsonify({'new_table': board.fen()})
 
@@ -80,48 +79,50 @@ def get_board_status():
         'winner': ("w" if board.outcome().winner == True else "b") if board.is_checkmate() else None
     })
 
-def min_max(board,alfa,beta,dubina,igrac, memoization):
-    if dubina==4 or board.is_game_over():
+
+def min_max(board, alfa, beta, dubina, igrac, memoization):
+    if dubina == 4 or board.is_game_over():
         return heuristika(board), None
 
-    m1, board1 = memoization.get(chess.polyglot.zobrist_hash(board), [None, None])
+    z = chess.polyglot.zobrist_hash(board)
+    m1, board1 = memoization.get(z, [None, None])
     if m1 is not None:
         return m1, board1
 
     potez = None
 
-    if igrac==1:
+    if igrac == 1:
         m = float('-inf')
         for move in rangiraj_poteze(board):
             board.push(move)
-            temp, _ = min_max(board,alfa,beta,dubina+1,0, memoization)
+            temp, _ = min_max(board, alfa, beta, dubina + 1, 0, memoization)
             board.pop()
-            if temp>m:
-                m=temp
+            if temp > m:
+                m = temp
                 potez = move
-            alfa = max(alfa,temp)
-            if beta<=alfa:
+            alfa = max(alfa, temp)
+            if beta <= alfa:
                 break
-        print(dubina,potez,m)
-        memoization[chess.polyglot.zobrist_hash(board)] = m, potez
+        print(dubina, potez, m)
+        memoization[z] = m, potez
         return m, potez
     else:
         m = float('inf')
         for move in rangiraj_poteze(board):
             board.push(move)
-            temp,_ = min_max(board,alfa,beta,dubina+1,1, memoization)
+            temp, _ = min_max(board, alfa, beta, dubina + 1, 1, memoization)
             board.pop()
-            if temp<m:
-                m=temp
+            if temp < m:
+                m = temp
                 potez = move
-            beta = min(beta,temp,m)
-            if beta<=alfa:
+            beta = min(beta, temp)
+            if beta <= alfa:
                 break
-        memoization[chess.polyglot.zobrist_hash(board)] = m, potez
+        memoization[z] = m, potez
         return m, potez
 
-def heuristika(board):
 
+def heuristika(board):
     piece_values = {
         chess.PAWN: 1,
         chess.KNIGHT: 3,
@@ -171,7 +172,16 @@ def heuristika(board):
             elif piece.color == chess.BLACK and chess.square_rank(square) <= 1:
                 score -= 0.5
 
+    if not board.has_castling_rights(chess.WHITE):
+        if board.king(chess.WHITE) in [chess.G1, chess.C1]:  # Bele rokade (kratka ili duga)
+            score += 1.5  # Bonus za sigurnog kralja nakon rokade
+    if not board.has_castling_rights(chess.BLACK):
+        if board.king(chess.BLACK) in [chess.G8, chess.C8]:  # Crne rokade (kratka ili duga)
+            score -= 1.5  # Penal za protivnika ako je rokirao, tj. prednost za sigurnog kralja
+
     return score
+
+
 def rangiraj_poteze(board):
     rangirani_potezi = []
     for move in board.legal_moves:
@@ -206,6 +216,7 @@ def rangiraj_poteze(board):
     rangirani_potezi.sort(key=lambda x: x[1], reverse=True)
     return [move for move, _ in rangirani_potezi]
 
+
 def evaluiraj_sva_hvatanja(board, alfa, beta):
     # Početna evaluacija trenutne pozicije
 
@@ -216,7 +227,7 @@ def evaluiraj_sva_hvatanja(board, alfa, beta):
 
     # Samo potezi hvatanja
     capture_moves = [move for move in board.legal_moves if board.is_capture(move)]
-    #capture_moves = rangiraj_poteze(board)  # Rangiramo poteze
+    # capture_moves = rangiraj_poteze(board)  # Rangiramo poteze
 
     for move in capture_moves:
         board.push(move)
@@ -227,6 +238,7 @@ def evaluiraj_sva_hvatanja(board, alfa, beta):
         alfa = max(alfa, evaluation)
 
     return alfa
+
 
 if __name__ == '__main__':
     app.run(debug=True)
