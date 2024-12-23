@@ -35,11 +35,9 @@ public class Engine {
         String state = chessAPI.getOutcome(new FENRequest(this.table)).execute().body().getOutcome();
 
         if(state == null || state.equals("None")) {
-            if(this.generateMoves().contains(move)) table = chessAPI.doMove(new MoveRequest(this.table, move)).execute().body().getNew_table();
-            //String BotMove = Minmax(tabla);
-            this.botMove(null);
+            if(this.generateMoves().contains(move))
+                table = chessAPI.doMove(new MoveRequest(this.table, move)).execute().body().getNew_table();
         }
-        else handleEnd(state);
     }
 
     @SneakyThrows
@@ -60,13 +58,12 @@ public class Engine {
     }
 
     @SneakyThrows
-    public void botMove(String move){
+    public void botMove(){
         String state = chessAPI.getOutcome(new FENRequest(this.table)).execute().body().getOutcome();
         if(state == null || state.equals("None"))
         {
             table = chessAPI.doBotMove(new FENRequest(this.table)).execute().body().getNew_table();
         }
-        else handleEnd(state);
     }
 
     @SneakyThrows
@@ -85,44 +82,18 @@ public class Engine {
     }
 
     @SneakyThrows
-    public String getWinner() {
-        return chessAPI.getStatus(new FENRequest(this.table)).execute().body().getWinner();
+    public boolean isRepetition() {
+        return chessAPI.getStatus(new FENRequest(this.table)).execute().body().getIs_repetition();
     }
 
-    public void handleEnd(String state)
-    {
-        String[] string = state.split(">");
-        String a = string[0].substring(string[0].length()-1);
-        switch (a){
-            case "1":
-                // TODO Alert za mat
-                break;
-            case "2":
-                // TODO Alert za pat
-                break;
-            case "3":
-                // TODO Alert za remi kada nema dovoljno materijala
-                break;
-            case "4":
-                // TODO Alert za remi posle 75 poteza bez jedenja
-                break;
-            case "5":
-                // TODO Alert za ponavljanje iste table 5 puta remi
-                break;
-        }
-        string = string[1].split("=");
-        a = string[0].substring(0,string[0].length()-2);
-        switch(a){
-            case "True":
-                // TODO beli pobedio
-                break;
-            case "False":
-                // TODO crni
-                break;
-            case "None":
-                // TODO remi
-                break;
-        }
+    @SneakyThrows
+    public boolean isInsufficientMaterial() {
+        return chessAPI.getStatus(new FENRequest(this.table)).execute().body().getIs_insufficient_material();
+    }
+
+    @SneakyThrows
+    public String getWinner() {
+        return chessAPI.getStatus(new FENRequest(this.table)).execute().body().getWinner();
     }
 }
 

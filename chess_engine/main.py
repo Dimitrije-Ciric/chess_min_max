@@ -56,7 +56,7 @@ def do_bot_move():
             board.push_san(reader.choice(board).move.uci())
         except IndexError:
             #print("123")
-            _, potez =min_max(board,float('-inf'),float('inf'),0,igrac)
+            _, potez = min_max(board,float('-inf'),float('inf'),0,igrac, {})
             print(potez)
             board.push(potez)
 
@@ -75,12 +75,18 @@ def get_board_status():
         'is_stalemate': board.is_stalemate(),
         'is_check': board.is_check(),
         'is_checkmate': board.is_checkmate(),
+        'is_repetition': board.can_claim_threefold_repetition(),
+        'is_insufficient_material': board.is_insufficient_material(),
         'winner': ("w" if board.outcome().winner == True else "b") if board.is_checkmate() else None
     })
 
-def min_max(board,alfa,beta,dubina,igrac):
+def min_max(board,alfa,beta,dubina,igrac, memoization):
     if dubina==4 or board.is_game_over():
         return heuristika(board), None
+
+    m1, board1 = memoization.get(chess.polyglot.zobrist_hash(board), [None, None])
+    if m1 is not None:
+        return m1, board1
 
     potez = None
 
@@ -88,7 +94,7 @@ def min_max(board,alfa,beta,dubina,igrac):
         m = float('-inf')
         for move in rangiraj_poteze(board):
             board.push(move)
-            temp, _ = min_max(board,alfa,beta,dubina+1,0)
+            temp, _ = min_max(board,alfa,beta,dubina+1,0, memoization)
             board.pop()
             if temp>m:
                 m=temp
@@ -97,12 +103,13 @@ def min_max(board,alfa,beta,dubina,igrac):
             if beta<=alfa:
                 break
         print(dubina,potez,m)
+        memoization[chess.polyglot.zobrist_hash(board)] = m, potez
         return m, potez
     else:
         m = float('inf')
         for move in rangiraj_poteze(board):
             board.push(move)
-            temp,_ = min_max(board,alfa,beta,dubina+1,1)
+            temp,_ = min_max(board,alfa,beta,dubina+1,1, memoization)
             board.pop()
             if temp<m:
                 m=temp
@@ -110,6 +117,7 @@ def min_max(board,alfa,beta,dubina,igrac):
             beta = min(beta,temp,m)
             if beta<=alfa:
                 break
+        memoization[chess.polyglot.zobrist_hash(board)] = m, potez
         return m, potez
 
 def heuristika(board):
@@ -166,7 +174,6 @@ def heuristika(board):
     return score
 def rangiraj_poteze(board):
     rangirani_potezi = []
-
     for move in board.legal_moves:
         move_score_guess = 0
         move_piece = board.piece_at(move.from_square)

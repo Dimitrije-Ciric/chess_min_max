@@ -100,6 +100,10 @@ class BoardStatus {
 
     private Boolean is_checkmate;
 
+    private Boolean is_repetition;
+
+    private Boolean is_insufficient_material;
+
     private String winner;
 }
 

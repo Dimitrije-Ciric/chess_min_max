@@ -45,7 +45,7 @@ public class ChessBoardPanel extends JPanel {
 
     public ChessBoardPanel() {
         if (userPlayer.equals("b"))
-            this.engine.botMove(null);
+            this.engine.botMove();
 
         initializeBoard();
         loadPieceImages();
@@ -54,6 +54,7 @@ public class ChessBoardPanel extends JPanel {
             @Override
             public void mousePressed(MouseEvent e) {
                 handleMouseClick(e);
+                repaint();
             }
         });
     }
@@ -96,14 +97,21 @@ public class ChessBoardPanel extends JPanel {
                 showPromotionPopup(move.substring(0, 4));
             else {
                 this.engine.myMove(move);
-                showGameEndPopup();
-                this.possibleMoves = null;
+                possibleMoves = null;
+                repaint();
+
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        engine.botMove();
+                        repaint();
+                        showGameEndPopup();
+                    }
+                });
+
             }
         } else {
             possibleMoves = this.engine.generateMoves(convertToChessPosition(selectedRow, selectedCol));
         }
-
-        repaint();
     }
 
     @Override
@@ -222,7 +230,7 @@ public class ChessBoardPanel extends JPanel {
         return flippedBoard;
     }
 
-    public String showPromotionPopup(String move) {
+    public void showPromotionPopup(String move) {
         // Create a dialog to hold the popup
         JDialog dialog = new JDialog((Frame) null, "Pawn Promotion", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -242,12 +250,18 @@ public class ChessBoardPanel extends JPanel {
             button.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    dialog.dispose();
+                    possibleMoves = null;
                     engine.myMove(move + piece);
-                    showGameEndPopup();
                     repaint();
 
-
-                    dialog.dispose();
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            engine.botMove();
+                            repaint();
+                            showGameEndPopup();
+                        }
+                    });
                 }
             });
             dialog.add(button);
@@ -255,12 +269,11 @@ public class ChessBoardPanel extends JPanel {
 
         dialog.setLocationRelativeTo(null);
         dialog.setVisible(true);
-
-        return selectedPiece[0];
     }
 
     private void showGameEndPopup() {
-        if (!this.engine.isCheckmate() && !this.engine.isStalemate()) {
+        if (!this.engine.isCheckmate() && !this.engine.isStalemate() &&
+                !this.engine.isRepetition() && !this.engine.isInsufficientMaterial()) {
             return;
         }
 
@@ -274,6 +287,10 @@ public class ChessBoardPanel extends JPanel {
 
         if (this.engine.isStalemate())
             label = new JLabel("Pat!");
+        else if (this.engine.isRepetition())
+            label = new JLabel("Izjednaceno (ponavljanje poteza)!");
+        else if (this.engine.isInsufficientMaterial())
+            label = new JLabel("Izjednaceno (nedovoljno materijala)!");
         else if (this.engine.getWinner().equals(userPlayer))
             label = new JLabel("Cestitamo, pobedio si!");
         else
