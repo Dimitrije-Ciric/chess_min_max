@@ -34,7 +34,7 @@ public class Engine {
     }
 
     public Engine() {
-        table = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        table = "4k3/5R2/8/8/3K4/8/8/8 w KQkq - 0 1";
     }
 
     @SneakyThrows

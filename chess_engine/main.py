@@ -39,7 +39,7 @@ def do_move():
 
     return jsonify({'new_table': board.fen()})
 
-
+memoizations = {}
 @app.route('/bot_move', methods=['POST'])
 def do_bot_move():
     data = request.get_json()
@@ -55,13 +55,25 @@ def do_bot_move():
         try:
             board.push_san(reader.choice(board).move.uci())
         except IndexError:
-            # print("123")
-            _, potez = min_max(board, float('-inf'), float('inf'), 0, igrac, {})
-            print(potez)
-            board.push(potez)
+            with chess.syzygy.open_tablebase('./syzygy') as tablebase:
+                try:
+                    fenless = board #bez prava na rokiranje
+                    fenless.set_castling_fen('-')
+                    tablebase.probe_dtz(fenless)  # Ako ovo ne podigne grešku, pozicija je podržana
+                    print("Pozicija je podržana u tablebase.")
+                    print(fenless.fen())
+
+                    _, potez = min_max_syzygy(fenless, float('-inf'), float('inf'), 0, igrac)
+                    #print(potez)
+                    board.push(potez)
+
+                except Exception:
+                    _, potez = min_max(board, float('-inf'), float('inf'), 0, igrac, memoizations)
+                    print(potez)
+                    print("sssssssssssssssss")
+                    board.push(potez)
 
     return jsonify({'new_table': board.fen()})
-
 
 @app.route('/get_status', methods=['POST'])
 def get_board_status():
@@ -78,6 +90,41 @@ def get_board_status():
         'is_insufficient_material': board.is_insufficient_material(),
         'winner': ("w" if board.outcome().winner == True else "b") if board.is_checkmate() else None
     })
+
+def min_max_syzygy(board,alfa,beta,dubina,igrac):
+    if dubina == 2 or board.is_game_over():
+        with chess.syzygy.open_tablebase('.\syzygy') as tablebase:
+                tablebase.probe_dtz(board),None
+
+    potez = None
+
+    if igrac == 1:
+        m = float('-inf')
+        for move in rangiraj_poteze(board):
+            board.push(move)
+            temp, _ = min_max_syzygy(board, alfa, beta, dubina + 1, 0)
+            board.pop()
+            if temp > m:
+                m = temp
+                potez = move
+            alfa = max(alfa, temp)
+            if beta <= alfa:
+                break
+        print(dubina, potez, m)
+        return m, potez
+    else:
+        m = float('inf')
+        for move in rangiraj_poteze(board):
+            board.push(move)
+            temp, _ = min_max_syzygy(board, alfa, beta, dubina + 1, 1)
+            board.pop()
+            if temp < m:
+                m = temp
+                potez = move
+            beta = min(beta, temp)
+            if beta <= alfa:
+                break
+        return m, potez
 
 
 def min_max(board, alfa, beta, dubina, igrac, memoization):
@@ -103,7 +150,7 @@ def min_max(board, alfa, beta, dubina, igrac, memoization):
             alfa = max(alfa, temp)
             if beta <= alfa:
                 break
-        print(dubina, potez, m)
+        #print(dubina, potez, m)
         memoization[z] = m, potez
         return m, potez
     else:
@@ -123,6 +170,16 @@ def min_max(board, alfa, beta, dubina, igrac, memoization):
 
 
 def heuristika(board):
+
+    if board.is_checkmate():
+        # Mat za belog igrača
+        if board.turn == chess.WHITE:
+            return float('-inf')  # Mat za belog - gubitak
+        else:
+            return float('inf')   # Mat za crnog - pobeda
+    elif board.is_stalemate():
+        return 0  # Pat - remi
+
     piece_values = {
         chess.PAWN: 1,
         chess.KNIGHT: 3,
