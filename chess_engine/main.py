@@ -123,6 +123,15 @@ def min_max(board, alfa, beta, dubina, igrac, memoization):
 
 
 def heuristika(board):
+    if board.is_checkmate():
+        # Mat za belog igrača
+        if board.turn == chess.WHITE:
+            return float('-inf')  # Mat za belog - gubitak
+        else:
+            return float('inf')   # Mat za crnog - pobeda
+    elif board.is_stalemate():
+        return 0  # Pat - remi
+
     piece_values = {
         chess.PAWN: 1,
         chess.KNIGHT: 3,
