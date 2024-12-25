@@ -126,9 +126,9 @@ def heuristika(board):
     if board.is_checkmate():
         # Mat za belog igrača
         if board.turn == chess.WHITE:
-            return float('-inf')  # Mat za belog - gubitak
+            return -999  # Mat za belog - gubitak
         else:
-            return float('inf')   # Mat za crnog - pobeda
+            return 999   # Mat za crnog - pobeda
     elif board.is_stalemate():
         return 0  # Pat - remi
 
@@ -172,7 +172,7 @@ def heuristika(board):
     score += legal_moves_white * 0.1
     score -= legal_moves_black * 0.1
 
-    # 4. Pozicioni bonusi (samo za pion na poslednjim redovima)
+    # 4. Pozicioni bonusi (samo za pesak na poslednjim redovima)
     for square in chess.SQUARES:
         piece = board.piece_at(square)
         if piece and piece.piece_type == chess.PAWN:
@@ -181,12 +181,19 @@ def heuristika(board):
             elif piece.color == chess.BLACK and chess.square_rank(square) <= 1:
                 score -= 0.5
 
+    # 5. Endgame King Evaluation (added from the new function)
+    if not board.has_castling_rights(chess.WHITE) and not board.has_castling_rights(chess.BLACK):
+        white_king_square = board.king(chess.WHITE)
+        black_king_square = board.king(chess.BLACK)
+        endgame_weight = 0.2
+        score += force_king_to_corner_endgame_eval(white_king_square, black_king_square, endgame_weight)
+
     if not board.has_castling_rights(chess.WHITE):
         if board.king(chess.WHITE) in [chess.G1, chess.C1]:  # Bele rokade (kratka ili duga)
-            score += 1.5  # Bonus za sigurnog kralja nakon rokade
+            score += 3  # Bonus za sigurnog kralja nakon rokade
     if not board.has_castling_rights(chess.BLACK):
         if board.king(chess.BLACK) in [chess.G8, chess.C8]:  # Crne rokade (kratka ili duga)
-            score -= 1.5  # Penal za protivnika ako je rokirao, tj. prednost za sigurnog kralja
+            score -= 3  # Penal za protivnika ako je rokirao, tj. prednost za sigurnog kralja
 
     return score
 
@@ -226,28 +233,30 @@ def rangiraj_poteze(board):
     return [move for move, _ in rangirani_potezi]
 
 
-def evaluiraj_sva_hvatanja(board, alfa, beta):
-    # Početna evaluacija trenutne pozicije
+def force_king_to_corner_endgame_eval(friendly_king_square, opponent_king_square, endgame_weight):
+    evaluation = 0
 
-    evaluation = heuristika(board)
-    if evaluation >= beta:
-        return beta
-    alfa = max(alfa, evaluation)
+    # Favor positions where opponent king is forced away from the center
+    opponent_king_rank = chess.square_rank(opponent_king_square)
+    opponent_king_file = chess.square_file(opponent_king_square)
 
-    # Samo potezi hvatanja
-    capture_moves = [move for move in board.legal_moves if board.is_capture(move)]
-    # capture_moves = rangiraj_poteze(board)  # Rangiramo poteze
+    opponent_king_dst_to_centre_file = max(3 - opponent_king_file, opponent_king_file - 4)
+    opponent_king_dst_to_centre_rank = max(3 - opponent_king_rank, opponent_king_rank - 4)
 
-    for move in capture_moves:
-        board.push(move)
-        evaluation = -evaluiraj_sva_hvatanja(board, -beta, -alfa)
-        board.pop()
-        if evaluation >= beta:
-            return beta
-        alfa = max(alfa, evaluation)
+    opponent_king_dst_from_centre = opponent_king_dst_to_centre_file + opponent_king_dst_to_centre_rank
+    evaluation += opponent_king_dst_from_centre
 
-    return alfa
+    # Incentivize moving the king closer to the opponent's king
+    friendly_king_rank = chess.square_rank(friendly_king_square)
+    friendly_king_file = chess.square_file(friendly_king_square)
 
+    dst_between_kings_file = abs(friendly_king_file - opponent_king_file)
+    dst_between_kings_rank = abs(friendly_king_rank - opponent_king_rank)
+    dst_between_kings = dst_between_kings_file + dst_between_kings_rank
+
+    evaluation += 14 - dst_between_kings
+
+    return int(evaluation * 10 * endgame_weight)
 
 if __name__ == '__main__':
     app.run(debug=True)

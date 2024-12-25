@@ -36,6 +36,7 @@ public class Engine {
     public Engine() {
         table = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     }
+    // 8/3k4/5r2/8/8/8/8/4K3 w - - 0 1
 
     @SneakyThrows
     public void myMove(String move)
